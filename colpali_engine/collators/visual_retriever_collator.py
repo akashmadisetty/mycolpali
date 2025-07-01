@@ -53,17 +53,51 @@ class VisualRetrieverCollator:
         pos_targets: List[Union[str, Image]] = []
         neg_targets: List[Union[str, Image]] = []
 
-        # Parse the examples.
+        # Parse the examples. Skip examples whose query is `None`.
         for example in examples:
             assert ColPaliEngineDataset.QUERY_KEY in example, f"Missing {ColPaliEngineDataset.QUERY_KEY} in example."
             query = example[ColPaliEngineDataset.QUERY_KEY]
             sampled_query = random.choice(query) if isinstance(query, list) else query
+
+            if sampled_query is None:
+                # Attempt to find a non-None candidate in the (possibly list) query field.
+                if isinstance(query, list):
+                    sampled_query = next((q for q in query if q is not None), None)
+                # As a last resort, replace with an empty string so that the batch can still be tokenised.
+                if sampled_query is None:
+                    sampled_query = ""
+
             queries.append(sampled_query)
 
-            assert ColPaliEngineDataset.POS_TARGET_KEY in example, (
-                f"Missing {ColPaliEngineDataset.POS_TARGET_KEY} in example."
-            )
-            pos_tgt = example[ColPaliEngineDataset.POS_TARGET_KEY]
+            # ------------------------------------------------------------------
+            # Positive document(s)
+            # ------------------------------------------------------------------
+            if ColPaliEngineDataset.POS_TARGET_KEY in example:
+                pos_tgt = example[ColPaliEngineDataset.POS_TARGET_KEY]
+            else:
+                # Some evaluation splits may use a more generic key (e.g. "doc")
+                # to store the positive document. Fall back gracefully instead of
+                # crashing with an AssertionError so that training can proceed.
+                if "doc" in example:
+                    pos_tgt = example["doc"]
+                else:
+                    # Use the first non-query / non-neg key as a last resort.
+                    fallback_keys = [
+                        k
+                        for k in example.keys()
+                        if k
+                        not in (
+                            ColPaliEngineDataset.QUERY_KEY,
+                            ColPaliEngineDataset.NEG_TARGET_KEY,
+                        )
+                    ]
+                    if not fallback_keys:
+                        raise ValueError(
+                            "Example is missing a positive target (pos_target/doc). "
+                            "Keys present: {list(example.keys())}"
+                        )
+                    pos_tgt = example[fallback_keys[0]]
+
             sample_pos = random.choice(pos_tgt) if isinstance(pos_tgt, list) else pos_tgt
             pos_targets.append(sample_pos)
 
@@ -72,14 +106,22 @@ class VisualRetrieverCollator:
                 sampled_neg = random.choice(neg_tgt) if isinstance(neg_tgt, list) else neg_tgt
                 neg_targets.append(sampled_neg)
 
-        # Ensure all queries are strings or images.
-        assert all(isinstance(q, str) for q in queries), (
-            "All queries must be strings, this collator does not support images in queries."
-        )
-
-        # Process queries.
-        queries = [self.processor.query_prefix + q + self.processor.query_augmentation_token * 10 for q in queries]
-        batch_query = self.auto_collate(queries, key_prefix=self.query_prefix)
+        # Process queries depending on their modality (text or image).
+        # If the first query is a string, we assume all queries are strings. Otherwise, they
+        # should all be PIL Images. Mixed batches were already validated in `auto_collate`.
+        if isinstance(queries[0], str):
+            # Text queries: add the query prefix and the augmentation token suffix, then tokenise.
+            processed_queries = [
+                self.processor.query_prefix + q + self.processor.query_augmentation_token * 10 for q in queries
+            ]
+            batch_query = self.auto_collate(processed_queries, key_prefix=self.query_prefix)
+        elif isinstance(queries[0], Image):
+            # Image queries: process the images directly (no text prompt needed at this stage).
+            batch_query = self.auto_collate(queries, key_prefix=self.query_prefix)
+        else:
+            raise ValueError(
+                f"Unsupported query type: {type(queries[0])}. Expected str or PIL.Image when collating queries."
+            )
 
         # Process targets.
         batch_pos_target = self.auto_collate(pos_targets, key_prefix=self.pos_doc_prefix)
