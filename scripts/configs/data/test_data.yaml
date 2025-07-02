@@ -8,3 +8,6 @@ docvqa_subsampled:
 arxivqa_subsampled:
   (): colpali_engine.utils.dataset_transformation.load_eval_set
   dataset_path: "vidore/arxivqa_test_subsampled"
+nayana_descvqa_1k_split:
+  (): colpali_engine.utils.dataset_transformation.load_eval_set
+  dataset_path: "Nayana-cognitivelab/Nayana-IR-DescVQA-finetune-1k-split"
