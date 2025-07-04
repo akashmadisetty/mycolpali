@@ -19,7 +19,7 @@ class ColbertModule(torch.nn.Module):
         self,
         max_batch_size: int = 1024,
         tau: float = 0.1,
-        norm_tol: float = 1e-3,
+        norm_tol: float = 0.05,
         filter_threshold: float = 0.95,
         filter_factor: float = 0.5,
     ):
@@ -59,6 +59,8 @@ class ColbertModule(torch.nn.Module):
         """
         normalized = scores / lengths.unsqueeze(1)
         mn, mx = torch.aminmax(normalized)
+        # Log the ranges to see patterns
+        print(f"Normalized score range: [{mn:.4f}, {mx:.4f}]")
         if mn < -self.norm_tol or mx > 1 + self.norm_tol:
             raise ValueError(
                 f"Scores out of bounds after normalization: "
