@@ -10,8 +10,8 @@ USE_LOCAL_DATASET = os.environ.get("USE_LOCAL_DATASET", "1") == "1"
 
 
 def load_train_set() -> ColPaliEngineDataset:
-    base_path = "akashmadisetty/"
-    dataset = load_dataset(base_path + "Nayana-IR-DescVQA-hi-10k-renamed", split="train")
+    base_path = "Nayana-cognitivelab/"
+    dataset = load_dataset(base_path + "exp_merged_colpali_nayana_10k", split="train")
 
     train_dataset = ColPaliEngineDataset(dataset, pos_target_column_name="image")
 
