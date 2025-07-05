@@ -270,7 +270,7 @@ class ColbertPairwiseCELoss(ColbertModule):
         pos_aware_negative_filtering: bool = False,
         max_batch_size: int = 1024,
         tau: float = 0.1,
-        norm_tol: float = 1e-3,
+        norm_tol: float = 0.035,
         filter_threshold: float = 0.95,
         filter_factor: float = 0.5,
     ):
