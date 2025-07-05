@@ -19,7 +19,7 @@ class ColbertModule(torch.nn.Module):
         self,
         max_batch_size: int = 1024,
         tau: float = 0.1,
-        norm_tol: float = 0.035,
+        norm_tol: float = 1e-3,
         filter_threshold: float = 0.95,
         filter_factor: float = 0.5,
     ):
@@ -57,10 +57,12 @@ class ColbertModule(torch.nn.Module):
         Raises:
             ValueError: If normalized scores exceed tolerance.
         """
-        normalized = scores / lengths.unsqueeze(1)
+        if scores.ndim == 2:
+            normalized = scores / lengths.unsqueeze(1)
+        else:
+            normalized = scores / lengths
+
         mn, mx = torch.aminmax(normalized)
-        # Log the ranges to see patterns
-        print(f"Normalized score range: [{mn:.4f}, {mx:.4f}]")
         if mn < -self.norm_tol or mx > 1 + self.norm_tol:
             print(
                 f"Scores out of bounds after normalization: "
@@ -270,7 +272,7 @@ class ColbertPairwiseCELoss(ColbertModule):
         pos_aware_negative_filtering: bool = False,
         max_batch_size: int = 1024,
         tau: float = 0.1,
-        norm_tol: float = 0.035,
+        norm_tol: float = 1e-3,
         filter_threshold: float = 0.95,
         filter_factor: float = 0.5,
     ):
