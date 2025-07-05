@@ -9,7 +9,7 @@ per_device_eval_batch_size: 4
 eval_strategy: "steps"
 # dataloader_num_workers: 8
 # bf16: true
-save_steps: 500
+save_steps: 1000
 logging_steps: 10
 eval_steps: 500
 warmup_steps: 500
