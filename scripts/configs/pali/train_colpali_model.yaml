@@ -1,6 +1,6 @@
 config:
   (): colpali_engine.trainer.colmodel_training.ColModelTrainingConfig
-  output_dir: "/root/colpali-engine-training/models/right_pad/train_colpali-3b-mix-448"
+  output_dir: "/root/colpali-engine-training/models/colpali-20k-lora"
   processor:
     (): colpali_engine.utils.transformers_wrappers.AllPurposeWrapper
     class_to_instanciate: !ext colpali_engine.models.ColPaliProcessor
